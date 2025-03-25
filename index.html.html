@@ -1,0 +1,651 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Israel">Israel</option>
+                                
+                                    <option value="United States">United States</option>
+                                
+                                    <option value="United Kingdom">United Kingdom</option>
+                                
+                                    <option value="Germany">Germany</option>
+                                
+                                    <option value="Canada">Canada</option>
+                                
+                                    <option value="France">France</option>
+                                
+                                    <option value="China (mainland)">China (mainland)</option>
+                                
+                                    <option value="Italy">Italy</option>
+                                
+                                    <option value="Switzerland">Switzerland</option>
+                                
+                                    <option value="Netherlands">Netherlands</option>
+                                
+                                    <option value="Spain">Spain</option>
+                                
+                                    <option value="Egypt">Egypt</option>
+                                
+                                    <option value="Saudi Arabia">Saudi Arabia</option>
+                                
+                                    <option value="India">India</option>
+                                
+                                    <option value="United Arab Emirates">United Arab Emirates</option>
+                                
+                                    <option value="Japan">Japan</option>
+                                
+                                    <option value="Pakistan">Pakistan</option>
+                                
+                                    <option value="Jordan">Jordan</option>
+                                
+                                    <option value="Kuwait">Kuwait</option>
+                                
+                                    <option value="Bahrain">Bahrain</option>
+                                
+                                    <option value="Libya">Libya</option>
+                                
+                                    <option value="Algeria">Algeria</option>
+                                
+                                    <option value="Oman">Oman</option>
+                                
+                                    <option value="Yemen">Yemen</option>
+                                
+                                    <option value="Sudan">Sudan</option>
+                                
+                                    <option value="Syria">Syria</option>
+                                
+                                    <option value="Iraq">Iraq</option>
+                                
+                                    <option value="Malaysia">Malaysia</option>
+                                
+                                    <option value="Australia">Australia</option>
+                                
+                                    <option value="Turkey">Turkey</option>
+                                
+                                    <option value="Iran">Iran</option>
+                                
+                                    <option value="Russia">Russia</option>
+                                
+                                    <option value="Lebanon">Lebanon</option>
+                                
+                                    <option value="Taiwan">Taiwan</option>
+                                
+                                    <option value="Morocco">Morocco</option>
+                                
+                                    <option value="Mauritania">Mauritania</option>
+                                
+                                    <option value="Senegal">Senegal</option>
+                                
+                                    <option value="Angola">Angola</option>
+                                
+                                    <option value="Tunisia">Tunisia</option>
+                                
+                                    <option value="Cameroon">Cameroon</option>
+                                
+                                    <option value="South Korea">South Korea</option>
+                                
+                                    <option value="Qatar">Qatar</option>
+                                
+                                    <option value="South Africa">South Africa</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#1e61a0", "id": "Israel", "label": "Israel", "shape": "dot", "size": 10, "value": 10}, {"color": "#7b7b7b", "id": "United States", "label": "United States", "shape": "dot", "size": 10, "value": 19}, {"color": "#7b7b7b", "id": "United Kingdom", "label": "United Kingdom", "shape": "dot", "size": 10, "value": 17}, {"color": "#7b7b7b", "id": "Germany", "label": "Germany", "shape": "dot", "size": 10, "value": 6}, {"color": "#7b7b7b", "id": "Canada", "label": "Canada", "shape": "dot", "size": 10, "value": 13}, {"color": "#7b7b7b", "id": "France", "label": "France", "shape": "dot", "size": 10, "value": 9}, {"color": "#7b7b7b", "id": "China (mainland)", "label": "China (mainland)", "shape": "dot", "size": 10, "value": 16}, {"color": "#7b7b7b", "id": "Italy", "label": "Italy", "shape": "dot", "size": 10, "value": 5}, {"color": "#7b7b7b", "id": "Switzerland", "label": "Switzerland", "shape": "dot", "size": 10, "value": 1}, {"color": "#7b7b7b", "id": "Netherlands", "label": "Netherlands", "shape": "dot", "size": 10, "value": 2}, {"color": "#7b7b7b", "id": "Spain", "label": "Spain", "shape": "dot", "size": 10, "value": 6}, {"color": "#1e61a0", "id": "Egypt", "label": "Egypt", "shape": "dot", "size": 10, "value": 20}, {"color": "#1e61a0", "id": "Saudi Arabia", "label": "Saudi Arabia", "shape": "dot", "size": 10, "value": 26}, {"color": "#7b7b7b", "id": "India", "label": "India", "shape": "dot", "size": 10, "value": 17}, {"color": "#1e61a0", "id": "United Arab Emirates", "label": "United Arab Emirates", "shape": "dot", "size": 10, "value": 19}, {"color": "#7b7b7b", "id": "Japan", "label": "Japan", "shape": "dot", "size": 10, "value": 1}, {"color": "#7b7b7b", "id": "Pakistan", "label": "Pakistan", "shape": "dot", "size": 10, "value": 11}, {"color": "#1e61a0", "id": "Jordan", "label": "Jordan", "shape": "dot", "size": 10, "value": 13}, {"color": "#1e61a0", "id": "Kuwait", "label": "Kuwait", "shape": "dot", "size": 10, "value": 10}, {"color": "#1e61a0", "id": "Bahrain", "label": "Bahrain", "shape": "dot", "size": 10, "value": 10}, {"color": "#1e61a0", "id": "Libya", "label": "Libya", "shape": "dot", "size": 10, "value": 10}, {"color": "#1e61a0", "id": "Algeria", "label": "Algeria", "shape": "dot", "size": 10, "value": 11}, {"color": "#1e61a0", "id": "Oman", "label": "Oman", "shape": "dot", "size": 10, "value": 10}, {"color": "#1e61a0", "id": "Yemen", "label": "Yemen", "shape": "dot", "size": 10, "value": 10}, {"color": "#1e61a0", "id": "Sudan", "label": "Sudan", "shape": "dot", "size": 10, "value": 10}, {"color": "#1e61a0", "id": "Syria", "label": "Syria", "shape": "dot", "size": 10, "value": 10}, {"color": "#1e61a0", "id": "Iraq", "label": "Iraq", "shape": "dot", "size": 10, "value": 12}, {"color": "#7b7b7b", "id": "Malaysia", "label": "Malaysia", "shape": "dot", "size": 10, "value": 11}, {"color": "#7b7b7b", "id": "Australia", "label": "Australia", "shape": "dot", "size": 10, "value": 5}, {"color": "#1e61a0", "id": "Turkey", "label": "Turkey", "shape": "dot", "size": 10, "value": 13}, {"color": "#7b7b7b", "id": "Iran", "label": "Iran", "shape": "dot", "size": 10, "value": 1}, {"color": "#7b7b7b", "id": "Russia", "label": "Russia", "shape": "dot", "size": 10, "value": 2}, {"color": "#1e61a0", "id": "Lebanon", "label": "Lebanon", "shape": "dot", "size": 10, "value": 10}, {"color": "#7b7b7b", "id": "Taiwan", "label": "Taiwan", "shape": "dot", "size": 10, "value": 2}, {"color": "#1e61a0", "id": "Morocco", "label": "Morocco", "shape": "dot", "size": 10, "value": 11}, {"color": "#1e61a0", "id": "Mauritania", "label": "Mauritania", "shape": "dot", "size": 10, "value": 7}, {"color": "#7b7b7b", "id": "Senegal", "label": "Senegal", "shape": "dot", "size": 10, "value": 1}, {"color": "#7b7b7b", "id": "Angola", "label": "Angola", "shape": "dot", "size": 10, "value": 1}, {"color": "#1e61a0", "id": "Tunisia", "label": "Tunisia", "shape": "dot", "size": 10, "value": 12}, {"color": "#7b7b7b", "id": "Cameroon", "label": "Cameroon", "shape": "dot", "size": 10, "value": 1}, {"color": "#7b7b7b", "id": "South Korea", "label": "South Korea", "shape": "dot", "size": 10, "value": 2}, {"color": "#1e61a0", "id": "Qatar", "label": "Qatar", "shape": "dot", "size": 10, "value": 10}, {"color": "#7b7b7b", "id": "South Africa", "label": "South Africa", "shape": "dot", "size": 10, "value": 1}]);
+                  edges = new vis.DataSet([{"from": "Israel", "to": "United States", "width": 31.133333333333333}, {"from": "Israel", "to": "United Kingdom", "width": 7.773333333333333}, {"from": "Israel", "to": "Germany", "width": 4.946666666666666}, {"from": "Israel", "to": "Canada", "width": 4.006666666666667}, {"from": "Israel", "to": "France", "width": 3.7066666666666666}, {"from": "Israel", "to": "China (mainland)", "width": 3.4466666666666668}, {"from": "Israel", "to": "Italy", "width": 2.9466666666666668}, {"from": "Israel", "to": "Switzerland", "width": 2.56}, {"from": "Israel", "to": "Netherlands", "width": 2.1}, {"from": "Israel", "to": "Spain", "width": 1.82}, {"from": "Egypt", "to": "Saudi Arabia", "width": 17.413333333333334}, {"from": "Egypt", "to": "United States", "width": 8.213333333333333}, {"from": "Egypt", "to": "China (mainland)", "width": 5.286666666666667}, {"from": "Egypt", "to": "India", "width": 4.633333333333334}, {"from": "Egypt", "to": "United Kingdom", "width": 3.9066666666666667}, {"from": "Egypt", "to": "United Arab Emirates", "width": 2.8933333333333335}, {"from": "Egypt", "to": "Canada", "width": 2.7066666666666666}, {"from": "Egypt", "to": "Japan", "width": 2.493333333333333}, {"from": "Egypt", "to": "Pakistan", "width": 2.4266666666666667}, {"from": "Egypt", "to": "Germany", "width": 2.3}, {"from": "Egypt", "to": "Jordan", "width": 1.4333333333333333}, {"from": "Egypt", "to": "Kuwait", "width": 0.6333333333333333}, {"from": "Egypt", "to": "Bahrain", "width": 0.19333333333333333}, {"from": "Egypt", "to": "Libya", "width": 0.10666666666666667}, {"from": "Egypt", "to": "Algeria", "width": 0.76}, {"from": "Egypt", "to": "Oman", "width": 0.48}, {"from": "Egypt", "to": "Yemen", "width": 0.68}, {"from": "Egypt", "to": "Sudan", "width": 0.24666666666666667}, {"from": "Egypt", "to": "Syria", "width": 0.13333333333333333}, {"from": "Iraq", "to": "India", "width": 6.8933333333333335}, {"from": "Iraq", "to": "Malaysia", "width": 6.513333333333334}, {"from": "Iraq", "to": "United Kingdom", "width": 2.993333333333333}, {"from": "Iraq", "to": "Saudi Arabia", "width": 2.8333333333333335}, {"from": "Iraq", "to": "Australia", "width": 2.453333333333333}, {"from": "Iraq", "to": "United States", "width": 2.4133333333333336}, {"from": "Iraq", "to": "Turkey", "width": 2.1333333333333333}, {"from": "Iraq", "to": "Iran", "width": 1.9866666666666666}, {"from": "Iraq", "to": "China (mainland)", "width": 1.7733333333333334}, {"from": "Iraq", "to": "Russia", "width": 1.16}, {"from": "Iraq", "to": "Libya", "width": 0.1}, {"from": "Iraq", "to": "Oman", "width": 0.4266666666666667}, {"from": "Jordan", "to": "Saudi Arabia", "width": 4.3}, {"from": "Jordan", "to": "United Arab Emirates", "width": 3.8}, {"from": "Jordan", "to": "United States", "width": 3.513333333333333}, {"from": "Jordan", "to": "Malaysia", "width": 2.2933333333333334}, {"from": "Jordan", "to": "India", "width": 2.2666666666666666}, {"from": "Jordan", "to": "United Kingdom", "width": 1.48}, {"from": "Jordan", "to": "China (mainland)", "width": 1.38}, {"from": "Jordan", "to": "Pakistan", "width": 1.1866666666666668}, {"from": "Jordan", "to": "Australia", "width": 1.06}, {"from": "Jordan", "to": "Bahrain", "width": 0.22666666666666666}, {"from": "Jordan", "to": "Libya", "width": 0.15333333333333332}, {"from": "Lebanon", "to": "France", "width": 3.1933333333333334}, {"from": "Lebanon", "to": "India", "width": 2.006666666666667}, {"from": "Lebanon", "to": "United States", "width": 1.96}, {"from": "Lebanon", "to": "Saudi Arabia", "width": 1.6266666666666667}, {"from": "Lebanon", "to": "Canada", "width": 1.2933333333333332}, {"from": "Lebanon", "to": "United Arab Emirates", "width": 1.2333333333333334}, {"from": "Lebanon", "to": "China (mainland)", "width": 1.1933333333333334}, {"from": "Lebanon", "to": "United Kingdom", "width": 1.18}, {"from": "Lebanon", "to": "Taiwan", "width": 0.9866666666666667}, {"from": "Lebanon", "to": "Pakistan", "width": 0.9133333333333333}, {"from": "Morocco", "to": "France", "width": 5.72}, {"from": "Morocco", "to": "United States", "width": 1.7866666666666666}, {"from": "Morocco", "to": "Canada", "width": 1.26}, {"from": "Morocco", "to": "United Kingdom", "width": 0.9933333333333333}, {"from": "Morocco", "to": "India", "width": 0.8533333333333334}, {"from": "Morocco", "to": "Spain", "width": 0.8066666666666666}, {"from": "Morocco", "to": "Saudi Arabia", "width": 0.7466666666666667}, {"from": "Morocco", "to": "Italy", "width": 0.5}, {"from": "Morocco", "to": "China (mainland)", "width": 0.44}, {"from": "Morocco", "to": "United Arab Emirates", "width": 0.43333333333333335}, {"from": "Morocco", "to": "Mauritania", "width": 0.06666666666666667}, {"from": "Kuwait", "to": "United States", "width": 0.8666666666666667}, {"from": "Kuwait", "to": "India", "width": 0.84}, {"from": "Kuwait", "to": "Saudi Arabia", "width": 0.6733333333333333}, {"from": "Kuwait", "to": "United Kingdom", "width": 0.6}, {"from": "Kuwait", "to": "Pakistan", "width": 0.5066666666666667}, {"from": "Kuwait", "to": "Turkey", "width": 0.4666666666666667}, {"from": "Kuwait", "to": "China (mainland)", "width": 0.44}, {"from": "Kuwait", "to": "Malaysia", "width": 0.38}, {"from": "Kuwait", "to": "Canada", "width": 0.3466666666666667}, {"from": "Bahrain", "to": "India", "width": 0.9133333333333333}, {"from": "Bahrain", "to": "Saudi Arabia", "width": 0.78}, {"from": "Bahrain", "to": "United States", "width": 0.34}, {"from": "Bahrain", "to": "Malaysia", "width": 0.30666666666666664}, {"from": "Bahrain", "to": "United Kingdom", "width": 0.3}, {"from": "Bahrain", "to": "Pakistan", "width": 0.22666666666666666}, {"from": "Bahrain", "to": "China (mainland)", "width": 0.21333333333333335}, {"from": "Bahrain", "to": "United Arab Emirates", "width": 0.19333333333333333}, {"from": "Libya", "to": "Malaysia", "width": 0.37333333333333335}, {"from": "Libya", "to": "United States", "width": 0.3}, {"from": "Libya", "to": "Saudi Arabia", "width": 0.25333333333333335}, {"from": "Libya", "to": "United Kingdom", "width": 0.21333333333333335}, {"from": "Libya", "to": "Turkey", "width": 0.14666666666666667}, {"from": "Libya", "to": "Canada", "width": 0.12666666666666668}, {"from": "Libya", "to": "Germany", "width": 0.08666666666666667}, {"from": "Mauritania", "to": "France", "width": 0.06666666666666667}, {"from": "Mauritania", "to": "Senegal", "width": 0.013333333333333334}, {"from": "Mauritania", "to": "Angola", "width": 0.006666666666666667}, {"from": "Mauritania", "to": "Spain", "width": 0.006666666666666667}, {"from": "Mauritania", "to": "Tunisia", "width": 0.006666666666666667}, {"from": "Mauritania", "to": "Cameroon", "width": 0.006666666666666667}, {"from": "Saudi Arabia", "to": "Pakistan", "width": 24.546666666666667}, {"from": "Saudi Arabia", "to": "India", "width": 21.586666666666666}, {"from": "Saudi Arabia", "to": "United States", "width": 17.546666666666667}, {"from": "Saudi Arabia", "to": "China (mainland)", "width": 15.88}, {"from": "Saudi Arabia", "to": "United Kingdom", "width": 11.8}, {"from": "Saudi Arabia", "to": "Malaysia", "width": 9.8}, {"from": "Saudi Arabia", "to": "Canada", "width": 6.733333333333333}, {"from": "Saudi Arabia", "to": "Tunisia", "width": 6.493333333333333}, {"from": "Saudi Arabia", "to": "South Korea", "width": 6.266666666666667}, {"from": "Saudi Arabia", "to": "United Arab Emirates", "width": 5.0}, {"from": "Saudi Arabia", "to": "Algeria", "width": 1.94}, {"from": "Saudi Arabia", "to": "Qatar", "width": 1.24}, {"from": "Saudi Arabia", "to": "Oman", "width": 0.8933333333333333}, {"from": "Saudi Arabia", "to": "Yemen", "width": 2.546666666666667}, {"from": "Saudi Arabia", "to": "Sudan", "width": 1.0266666666666666}, {"from": "Saudi Arabia", "to": "Syria", "width": 0.13333333333333333}, {"from": "United Arab Emirates", "to": "United States", "width": 11.033333333333333}, {"from": "United Arab Emirates", "to": "China (mainland)", "width": 8.733333333333333}, {"from": "United Arab Emirates", "to": "India", "width": 6.84}, {"from": "United Arab Emirates", "to": "United Kingdom", "width": 6.82}, {"from": "United Arab Emirates", "to": "Pakistan", "width": 5.02}, {"from": "United Arab Emirates", "to": "Australia", "width": 3.6933333333333334}, {"from": "United Arab Emirates", "to": "Canada", "width": 3.506666666666667}, {"from": "United Arab Emirates", "to": "Malaysia", "width": 3.24}, {"from": "United Arab Emirates", "to": "Tunisia", "width": 0.8466666666666667}, {"from": "United Arab Emirates", "to": "Algeria", "width": 1.1533333333333333}, {"from": "United Arab Emirates", "to": "Oman", "width": 0.5}, {"from": "United Arab Emirates", "to": "Syria", "width": 0.09333333333333334}, {"from": "Turkey", "to": "United States", "width": 12.933333333333334}, {"from": "Turkey", "to": "United Kingdom", "width": 7.06}, {"from": "Turkey", "to": "Germany", "width": 4.153333333333333}, {"from": "Turkey", "to": "China (mainland)", "width": 3.44}, {"from": "Turkey", "to": "Italy", "width": 3.1666666666666665}, {"from": "Turkey", "to": "India", "width": 2.9266666666666667}, {"from": "Turkey", "to": "Canada", "width": 2.64}, {"from": "Turkey", "to": "Netherlands", "width": 2.513333333333333}, {"from": "Turkey", "to": "France", "width": 2.28}, {"from": "Turkey", "to": "Spain", "width": 2.2733333333333334}, {"from": "Tunisia", "to": "France", "width": 10.606666666666667}, {"from": "Tunisia", "to": "United States", "width": 1.52}, {"from": "Tunisia", "to": "Canada", "width": 1.3666666666666667}, {"from": "Tunisia", "to": "United Kingdom", "width": 0.9066666666666666}, {"from": "Tunisia", "to": "India", "width": 0.7266666666666667}, {"from": "Tunisia", "to": "Germany", "width": 0.6933333333333334}, {"from": "Tunisia", "to": "Italy", "width": 0.64}, {"from": "Tunisia", "to": "Spain", "width": 0.6333333333333333}, {"from": "Algeria", "to": "France", "width": 9.673333333333334}, {"from": "Algeria", "to": "Canada", "width": 2.22}, {"from": "Algeria", "to": "United States", "width": 2.0933333333333333}, {"from": "Algeria", "to": "United Kingdom", "width": 1.6133333333333333}, {"from": "Algeria", "to": "China (mainland)", "width": 1.4733333333333334}, {"from": "Algeria", "to": "Spain", "width": 0.8933333333333333}, {"from": "Algeria", "to": "India", "width": 0.7333333333333333}, {"from": "Algeria", "to": "Yemen", "width": 0.31333333333333335}, {"from": "Qatar", "to": "United States", "width": 5.366666666666666}, {"from": "Qatar", "to": "United Kingdom", "width": 2.7466666666666666}, {"from": "Qatar", "to": "China (mainland)", "width": 2.013333333333333}, {"from": "Qatar", "to": "Pakistan", "width": 1.64}, {"from": "Qatar", "to": "Australia", "width": 1.3333333333333333}, {"from": "Qatar", "to": "Canada", "width": 1.28}, {"from": "Qatar", "to": "India", "width": 1.24}, {"from": "Qatar", "to": "France", "width": 1.1466666666666667}, {"from": "Qatar", "to": "Italy", "width": 1.1266666666666667}, {"from": "Oman", "to": "India", "width": 3.0533333333333332}, {"from": "Oman", "to": "Malaysia", "width": 0.9466666666666667}, {"from": "Oman", "to": "United States", "width": 0.7866666666666666}, {"from": "Oman", "to": "United Kingdom", "width": 0.6266666666666667}, {"from": "Oman", "to": "Pakistan", "width": 0.6066666666666667}, {"from": "Oman", "to": "Australia", "width": 0.4266666666666667}, {"from": "Yemen", "to": "Malaysia", "width": 1.1933333333333334}, {"from": "Yemen", "to": "China (mainland)", "width": 0.98}, {"from": "Yemen", "to": "India", "width": 0.8466666666666667}, {"from": "Yemen", "to": "Pakistan", "width": 0.6866666666666666}, {"from": "Yemen", "to": "South Korea", "width": 0.6733333333333333}, {"from": "Yemen", "to": "United States", "width": 0.38}, {"from": "Yemen", "to": "Taiwan", "width": 0.3333333333333333}, {"from": "Sudan", "to": "Malaysia", "width": 0.47333333333333333}, {"from": "Sudan", "to": "China (mainland)", "width": 0.4}, {"from": "Sudan", "to": "United Kingdom", "width": 0.3333333333333333}, {"from": "Sudan", "to": "United States", "width": 0.32}, {"from": "Sudan", "to": "South Africa", "width": 0.29333333333333333}, {"from": "Sudan", "to": "Pakistan", "width": 0.15333333333333332}, {"from": "Sudan", "to": "India", "width": 0.12666666666666668}, {"from": "Sudan", "to": "Canada", "width": 0.07333333333333333}, {"from": "Syria", "to": "India", "width": 0.2866666666666667}, {"from": "Syria", "to": "United States", "width": 0.20666666666666667}, {"from": "Syria", "to": "China (mainland)", "width": 0.16666666666666666}, {"from": "Syria", "to": "Malaysia", "width": 0.12666666666666668}, {"from": "Syria", "to": "France", "width": 0.10666666666666667}, {"from": "Syria", "to": "Russia", "width": 0.1}, {"from": "Syria", "to": "Germany", "width": 0.09333333333333334}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
